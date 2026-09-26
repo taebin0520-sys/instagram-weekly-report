@@ -1,5 +1,5 @@
 """주간 리포트를 텍스트로 생성한다. (브랜드 강화 기준)"""
-from src.data_loader import split_by_week
+from src.data_loader import split_by_week, week_bounds
 from src.kpi import add_rates, week_over_week, topic_summary
 
 
@@ -20,7 +20,9 @@ def build_weekly_report(df) -> str:
         return "데이터가 없습니다."
 
     latest = add_rates(latest)
-    start, end = latest["date"].min().date(), latest["date"].max().date()
+    # 게시물 최소/최대 날짜가 아니라 ISO 주 경계(월~일)를 쓴다.
+    # "이번 주"가 어디까지인지가 게시 여부에 따라 달라지면 안 된다.
+    start, end = week_bounds(latest)
 
     total_reach = int(latest["reach"].sum())
     total_saves = int(latest["saves"].sum())
@@ -38,7 +40,7 @@ def build_weekly_report(df) -> str:
     lines = []
     lines.append("━" * 33)
     lines.append("아벤투라 인스타 주간 리포트 (브랜드 강화 기준)")
-    lines.append(f"{start} ~ {end} ({len(latest)}건)")
+    lines.append(f"{start}(월) ~ {end}(일) ({len(latest)}건)")
     lines.append("━" * 33)
     lines.append("")
     lines.append("[이번 주 요약]")
