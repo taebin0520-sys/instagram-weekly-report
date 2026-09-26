@@ -32,6 +32,12 @@ pytest
 
 실제 데이터는 `my_data/` 폴더에 두세요 (커밋되지 않음).
 
+## 데모 페이지
+https://taebin0520-sys.github.io/instagram-weekly-report/
+
+`python render_html.py`가 샘플 데이터로 `docs/index.html`을 만든다.
+**이 페이지는 sample_data(가상 데이터) 데모 전용이며, 실제 조합 데이터를 올리지 않는다.**
+
 > Python 3.11 이상이 필요하다 (pandas 3.0 요구사항).
 > 버전은 `requirements.txt`에 고정되어 있다.
 
@@ -43,6 +49,8 @@ src/report.py         주간 리포트 텍스트 생성
 main.py               실행 진입점
 tests/test_kpi.py     계산 로직 테스트
 sample_data/          샘플 데이터
+render_html.py        데모 페이지 생성 (docs/index.html)
+docs/                 GitHub Pages 데모 (가상 데이터 전용)
 ```
 
 ## 매주 하는 일
