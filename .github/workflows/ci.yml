@@ -33,3 +33,10 @@ jobs:
 
       - name: pytest 실행
         run: pytest -v
+
+      # pytest 가 검증하는 3개 함수는 pandas 를 쓰지 않는다.
+      # 즉 add_rates / split_by_week / topic_summary / build_weekly_report 같은
+      # pandas 의존 경로는 pytest 만으로는 한 번도 실행되지 않는다.
+      # 실제로 리포트가 생성되는지 확인하려면 진입점을 직접 돌려봐야 한다.
+      - name: smoke 테스트 — 리포트 생성 (출력 전문)
+        run: python main.py sample_data/instagram_posts.csv
