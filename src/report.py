@@ -11,7 +11,20 @@ from src.kpi import (
 
 
 def _fmt_pct(v):
-    return "확인 불가" if v is None else f"{v*100:.1f}%"
+    """비율을 소수점 1자리 백분율로. 산출 불가면 '확인 불가'.
+
+    None 뿐 아니라 NaN 도 '확인 불가'로 본다.
+    pandas 의 groupby().mean() 은 그룹의 값이 전부 None 이면
+    None 이 아니라 NaN 을 돌려준다 (topic_summary 의 평균저장률).
+    그 NaN 을 그대로 흘리면 'nan%' 가 출력되어 규칙 3 을 위반한다.
+    이 함수가 '확인 불가' 문자열화의 유일한 관문이므로 여기서 막는다.
+
+    v != v 는 NaN 판별이다 — NaN 은 자기 자신과도 같지 않다.
+    (math.isnan 은 None 이나 비수치 입력에서 터지므로 쓰지 않는다)
+    """
+    if v is None or v != v:
+        return "확인 불가"
+    return f"{v*100:.1f}%"
 
 
 def _fmt_delta_pct(v, reason=""):
