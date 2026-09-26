@@ -14,20 +14,20 @@
 ## 진행 순서
 
 ```
-W0 스펙(이 PR) → W1 steering·결정 반영 → W2 입력·검증 → W3 계산·리포트 → W4 화면 → W5 보호 점검·QA
+W0 스펙(#11 완료) → W1 steering·결정 반영 → W2 입력·검증 → W3 계산·리포트 → W4 화면 → W5 보호 점검·QA
 ```
 
 W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하기 전에 화면을 만들지 않는다.
 
 ---
 
-### W0. 스펙 작성 (이 PR)
+### W0. 스펙 작성 — 완료 (#11)
 
 - 산출물: `.kiro/specs/weekly-report-web/requirements.md`, `design.md`, `tasks.md`
 - 완료 기준
-  - [ ] 위험 지점 3가지가 실측 근거와 함께 design.md §4에 있다
-  - [ ] 결정 필요 D1~D3이 requirements.md §7에 있다
-  - [ ] 코드 변경 0줄
+  - [x] 위험 지점 3가지가 실측 근거와 함께 design.md §4에 있다
+  - [x] 결정 필요 D1~D3이 requirements.md §7에 있다
+  - [x] 코드 변경 0줄
 
 ### W1. steering 수정 + 결정 사항 반영
 
@@ -61,6 +61,7 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
   - `docs/report.js`: 주 분리, KPI, 전주 대비, TOP/하위, 주제별, 포맷 함수, `buildWeeklyReport`
   - `web/fixtures/`: `sample_data` 복사본 + 기존 엣지 케이스 7종을 CSV로 옮긴 것 + 위험 지점 전용 3종
     (`rounding_tie.csv`, `negative_zero_delta.csv`, `tie_order.csv`)
+    + 중간 빈 줄 케이스 `middle_blank_line.csv` (파일 중간에 빈 줄이 있는 유효 입력, design.md §5.4 ②)
   - `web/compare.sh`: 유효 fixture 텍스트 완전 일치 비교 추가
   - CI: `TZ=America/Los_Angeles`로 compare.sh 한 번 더
 - 완료 기준

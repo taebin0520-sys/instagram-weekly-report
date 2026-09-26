@@ -9,12 +9,16 @@
 
 1. **구조 유지** — 아래 폴더 구조를 그대로 둔다. 새 폴더, 새 아키텍처, 새 추상화 계층을 만들지 않는다.
    ```
-   src/data_loader.py   CSV 로드 및 검증
-   src/kpi.py           참여율/저장률/전주대비 계산
-   src/report.py        주간 리포트 텍스트 생성
-   main.py              실행 진입점
-   tests/test_kpi.py    계산 로직 테스트
-   sample_data/         샘플 데이터
+   src/data_loader.py        CSV 로드 및 검증
+   src/kpi.py                참여율/저장률/전주대비 계산
+   src/report.py             주간 리포트 텍스트 생성
+   main.py                   실행 진입점
+   render_html.py            데모 페이지 생성 (W4에서 제거 예정, 웹버전 D2)
+   tests/test_kpi.py         계산 로직 테스트
+   tests/test_edge_cases.py  엣지 케이스 테스트
+   sample_data/              샘플 데이터 (가상)
+   docs/                     웹버전 화면·계산 (index.html, app.js, report.js) — GitHub Pages 공개 폴더
+   web/                      Node 비교 검증 전용 (cli.mjs, fixtures/, compare.sh)
    ```
 
 2. **테스트 보호** — 기존 pytest 테스트를 깨뜨리지 않는다.
@@ -38,12 +42,12 @@
 6. **최소 수정** — 전체 재작성보다 기존 코드에 최소 수정으로 접근한다.
    시그니처 변경이 필요하면 기본값 있는 인자 추가를 우선한다.
 
-7. **데모 페이지는 가상 데이터 전용** — `docs/index.html`(GitHub Pages)은 `sample_data` 기준 데모로만 유지하며, 실제 조합 데이터를 절대 올리지 않는다.
+7. **저장소에는 가상 데이터만** — `docs/index.html`(GitHub Pages)은 브라우저 내 계산 도구다. 저장소에는 가상 데이터(예시·fixture)만 커밋하며, 실제 조합 데이터를 절대 올리지 않는다.
 
 ## 만들지 않는 것
 
 - Instagram API 자동 수집
-- Streamlit / 웹 대시보드 (텍스트 리포트만)
+- 서버·Streamlit 웹 대시보드. 웹 UI는 브라우저 내 계산 방식(`docs/`)만 허용하며, 출력은 텍스트 리포트와 동일해야 한다
 - 목표 수치 자동 생성 (항상 실제 입력값 기반)
 - "다음 주 액션" 자동 작성 (판단은 사람이 한다)
 
