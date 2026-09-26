@@ -145,6 +145,7 @@ check_error error_middle_blank_line.csv noline
 
 echo "== JS 전용 거부 (R1.9) =="
 check_js_only jsonly_date_format.csv
+check_js_only jsonly_sign_prefix.csv
 
 echo "== 형식별 읽기 (쉼표·탭·BOM) =="
 check_bytes

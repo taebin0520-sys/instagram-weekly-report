@@ -38,7 +38,7 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
   - [ ] 규칙 1 폴더 목록에 `docs/`, `web/`가 추가된다
   - [ ] 코드 변경 0줄, pytest 17 passed
 
-### W2. 입력 파싱·검증 + Node CLI + 오류 비교
+### W2. 입력 파싱·검증 + Node CLI + 오류 비교 — 완료 (#13)
 
 - 선행: W1
 - 범위
@@ -49,11 +49,11 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
   - `web/compare.sh`: 오류 fixture 비교 (design.md §5.3 기준)
   - CI: setup-node + compare.sh 스텝 추가
 - 완료 기준
-  - [ ] 오류 fixture 전부: Python·Node 둘 다 거부, JS가 안내한 (줄, 컬럼) ⊆ Python이 안내한 (줄, 컬럼) (design §5.4 해당 fixture는 줄 번호 제외, 컬럼만 비교)
-  - [ ] 오류 메시지에 줄 번호·컬럼·값이 한국어로 들어간다 (줄 번호는 헤더=1번째 줄 기준)
-  - [ ] 탭 구분·쉼표 구분·BOM 있는 입력을 모두 같은 행으로 읽는다
-  - [ ] 날짜 형식 오류 fixture는 "JS 전용 거부"로 표시되고 비교 대상에서 빠진다
-  - [ ] CI 초록, pytest 17 passed
+  - [x] 오류 fixture 전부: Python·Node 둘 다 거부, JS가 안내한 (줄, 컬럼) ⊆ Python이 안내한 (줄, 컬럼) (design §5.4 해당 fixture는 줄 번호 제외, 컬럼만 비교)
+  - [x] 오류 메시지에 줄 번호·컬럼·값이 한국어로 들어간다 (줄 번호는 헤더=1번째 줄 기준)
+  - [x] 탭 구분·쉼표 구분·BOM 있는 입력을 모두 같은 행으로 읽는다
+  - [x] 날짜 형식 오류 fixture는 "JS 전용 거부"로 표시되고 비교 대상에서 빠진다
+  - [x] CI 초록, pytest 17 passed
 
 ### W3. 계산·리포트 텍스트 + 정답지 비교
 
@@ -79,6 +79,7 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
 - 범위
   - 붙여넣기 / 파일 선택, 헤더 복사, 예시 데이터 불러오기, 리포트 만들기, 결과 표시, 리포트 텍스트 복사
   - 데이터 미전송 안내 문구, CSP meta (design.md §6)
+  - 파일 선택 시 EUC-KR 인코딩 처리 (R1.8): UTF-8(fatal) 실패 시 EUC-KR로 다시 읽기 (design.md §5.2)
   - D2 확정안 적용: `render_html.py`와 CI "데모 페이지 최신 여부" 스텝 제거(권장안 기준)
   - CI: 예시 데이터 == `sample_data/instagram_posts.csv` 검사
 - 완료 기준
@@ -93,8 +94,8 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
 - 선행: W4
 - 범위
   - CI: `docs/*.js` 금지 API 검사 (design.md §6 목록)
-  - README: "팀원용 사용법"(링크 → 붙여넣기 → 복사) 3단계, 알려진 차이(날짜 형식, EUC-KR, 빈칸 오류 안내)
-  - Python 빈칸 오류 목록 현상 Issue 등록 (D3)
+  - README: "팀원용 사용법"(링크 → 붙여넣기 → 복사) 3단계, 알려진 차이(날짜 형식, EUC-KR, 빈칸 또는 소수 오류 안내)
+  - Python 빈칸 또는 소수 오류 시 정상 행까지 나열하는 현상 Issue 등록 (D3, design.md §5.3)
   - 실기기 QA 체크리스트 기록
 - 완료 기준
   - [ ] 개발자도구 Network 탭에서 페이지 로드 후 `docs/` 파일 외 요청 0건 (스크린샷)
