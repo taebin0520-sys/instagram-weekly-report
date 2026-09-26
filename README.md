@@ -8,9 +8,17 @@
 
 ## 실행 방법
 ```bash
-pip install pandas
+pip install -r requirements.txt
 python main.py sample_data/instagram_posts.csv
 ```
+
+테스트 실행:
+```bash
+pytest
+```
+
+> Python 3.11 이상이 필요하다 (pandas 3.0 요구사항).
+> 버전은 `requirements.txt`에 고정되어 있다.
 
 ## 폴더 구조
 ```

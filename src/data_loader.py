@@ -13,11 +13,34 @@ NUMERIC_COLUMNS = [
 ]
 
 
+def _is_count(value) -> bool:
+    """0 이상의 정수인지 검사한다.
+
+    str.isdigit() 은 '-5', '1.5', '', 'nan' 을 모두 False 로 본다.
+    기존 코드는 lstrip("-") 로 부호를 떼고 검사해서 '-5' 가 통과했다.
+    도달·좋아요·저장 같은 값은 셀 수 있는 개수이므로 음수가 될 수 없다.
+    음수가 들어오면 입력 오류로 보고 거부한다.
+    """
+    return str(value).strip().isdigit()
+
+
+def _csv_line_no(index) -> int:
+    """pandas 인덱스를 CSV 파일의 실제 줄 번호로 바꾼다.
+
+    헤더가 1줄이고 인덱스는 0부터이므로 +2 다.
+    검증은 정렬(reset_index) 전에 하므로 인덱스가 파일 순서와 일치한다.
+    사용자는 pandas 인덱스가 아니라 '파일 몇 번째 줄'로 찾아야 고칠 수 있다.
+    """
+    return int(index) + 2
+
+
 def load_posts(csv_path: str) -> pd.DataFrame:
     """CSV를 읽고 필수 컬럼과 숫자 타입을 검증한다.
 
-    문제가 있으면 어떤 행/컬럼이 문제인지 알려주는 에러를 던진다.
-    (조용히 잘못된 데이터로 계산하지 않기 위함)
+    문제가 있으면 몇 번째 줄 / 어떤 컬럼 / 어떤 값이 잘못됐는지 알려주는
+    에러를 던진다. (조용히 잘못된 데이터로 계산하지 않기 위함)
+    누락값을 0으로 자동 보정하지 않는다 — 0은 '성과가 없었다'는 실제
+    관측값이므로 '입력을 안 했다'와 섞이면 지표가 오염된다.
     """
     df = pd.read_csv(csv_path)
 
@@ -26,10 +49,18 @@ def load_posts(csv_path: str) -> pd.DataFrame:
         raise ValueError(f"필수 컬럼이 없습니다: {missing}")
 
     for col in NUMERIC_COLUMNS:
-        non_numeric = df[~df[col].apply(lambda v: str(v).strip().lstrip("-").isdigit())]
-        if not non_numeric.empty:
+        invalid = df[~df[col].apply(_is_count)]
+        if not invalid.empty:
+            details = "\n".join(
+                f"  - {_csv_line_no(idx)}번째 줄 (date={r['date']}): "
+                f"{col} = {r[col]!r}"
+                for idx, r in invalid.iterrows()
+            )
             raise ValueError(
-                f"'{col}' 컬럼에 숫자가 아닌 값이 있습니다. 문제 행:\n{non_numeric[['date', col]]}"
+                f"'{col}' 컬럼에 0 이상의 정수가 아닌 값이 있습니다.\n"
+                f"{details}\n"
+                f"  도달·좋아요·저장 같은 값은 음수가 될 수 없습니다. "
+                f"빈칸이면 0을 직접 입력해 주세요."
             )
         df[col] = df[col].astype(int)
 

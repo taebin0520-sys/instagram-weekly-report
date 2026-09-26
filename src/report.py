@@ -11,7 +11,20 @@ from src.kpi import (
 
 
 def _fmt_pct(v):
-    return "확인 불가" if v is None else f"{v*100:.1f}%"
+    """비율을 소수점 1자리 백분율로. 산출 불가면 '확인 불가'.
+
+    None 뿐 아니라 NaN 도 '확인 불가'로 본다.
+    pandas 의 groupby().mean() 은 그룹의 값이 전부 None 이면
+    None 이 아니라 NaN 을 돌려준다 (topic_summary 의 평균저장률).
+    그 NaN 을 그대로 흘리면 'nan%' 가 출력되어 규칙 3 을 위반한다.
+    이 함수가 '확인 불가' 문자열화의 유일한 관문이므로 여기서 막는다.
+
+    v != v 는 NaN 판별이다 — NaN 은 자기 자신과도 같지 않다.
+    (math.isnan 은 None 이나 비수치 입력에서 터지므로 쓰지 않는다)
+    """
+    if v is None or v != v:
+        return "확인 불가"
+    return f"{v*100:.1f}%"
 
 
 def _fmt_delta_pct(v, reason=""):
@@ -112,8 +125,21 @@ def build_weekly_report(df) -> str:
         total_reach, prev_totals["reach"] if prev_totals is not None else None
     )
 
-    top = latest.sort_values("save_rate", ascending=False).head(2)
-    bottom = latest.sort_values("save_rate", ascending=True).head(1)
+    # 저장률이 '확인 불가'(None)인 게시물은 순위를 매길 근거가 없으므로 항상 뒤로 보낸다.
+    # None 이 섞인 열은 object dtype 이 되어 pandas 정렬이 값 비교에 실패할 수 있다.
+    # 그래서 '산출 가능 여부'를 불리언 열로 뽑아 1차 정렬 기준으로 쓰고,
+    # 값 자체는 2차 기준으로만 쓴다. 이러면 TOP 이든 하위든 None 이 앞에 오지 않는다.
+    # (하위 게시물에 '확인 불가'가 뽑히면 '성과가 나빴다'는 오독을 유발한다)
+    ranked = latest.assign(
+        _rate_known=[v is not None for v in latest["save_rate"]],
+        _rate_value=[0.0 if v is None else v for v in latest["save_rate"]],
+    )
+    top = ranked.sort_values(
+        ["_rate_known", "_rate_value"], ascending=[False, False]
+    ).head(2)
+    bottom = ranked.sort_values(
+        ["_rate_known", "_rate_value"], ascending=[False, True]
+    ).head(1)
 
     lines = []
     lines.append("━" * 33)
@@ -123,9 +149,12 @@ def build_weekly_report(df) -> str:
     lines.append("")
     # 지표 우선순위: 저장률(브랜드 각인 1순위) -> 참여율 -> 공유 -> 도달
     lines.append("[이번 주 요약]")
+    # 저장률은 비율이라 규모 감각이 없다. 근거 수치를 붙여
+    # '저장 47건이 도달 3,050에서 나왔다'는 맥락을 함께 보여준다.
     lines.append(
         f"- 저장률 {_fmt_pct(week_save_rate)} "
-        f"{_fmt_delta_pp(save_rate_delta, delta_reason)}"
+        f"{_fmt_delta_pp(save_rate_delta, delta_reason)} "
+        f"— 저장 {this_totals['saves']} / 도달 {total_reach:,}"
     )
     lines.append(
         f"- 참여율 {_fmt_pct(week_engagement_rate)} "
