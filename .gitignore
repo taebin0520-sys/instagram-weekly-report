@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 테스트 캐시
+.pytest_cache/
+.coverage
+
+# Kiro 로컬 샌드박스 설정 (spec/steering은 커밋한다)
+.kiro/settings/
+
+# OS
+.DS_Store
