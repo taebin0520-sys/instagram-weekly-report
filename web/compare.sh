@@ -159,8 +159,8 @@ check_report() {  # $1=파일 이름
   pass "$name — 텍스트 완전 일치 ($(printf '%s\n' "$js_out" | wc -l | tr -d ' ')줄)"
 }
 
-# 주제별 평균이 딱 같은 주제끼리의 순서만 비교에서 뺀다 (design §4 위험 ③ 실측, 결정 D4).
-# pandas 는 이 순서를 정하지 않는다 — numpy 의 불안정 정렬(SIMD)이 CPU 에 따라 순서를 바꾼다.
+# 주제별 평균이 딱 같은 주제끼리의 순서만 비교에서 뺀다 (design §4 위험 ③ 실측, 결정 필요 D4 — 제안 상태).
+# pandas 는 이 순서를 보장하지 않는다 — 실수(float) 정렬에 numpy SIMD 정렬(불안정)이 쓰인다.
 # 그래서: 주제별 구획 밖은 완전 일치, 구획 안은 "줄 목록이 같은지"만 본다. 두 순서는 기록용으로 출력한다.
 check_report_topic_tie() {  # $1=파일 이름
   local name=$1 f="$FIXTURES/$1" py_out js_out
@@ -179,7 +179,7 @@ check_report_topic_tie() {  # $1=파일 이름
   elif [ "$(topic_lines "$py_out")" = "$(topic_lines "$js_out")" ]; then
     pass "$name — 동률 순서까지 완전 일치"
   else
-    pass "$name — 주제별 동률 순서만 다름 (순서 제외 일치, D4)"
+    pass "$name — 주제별 동률 순서만 다름 (순서 제외 일치, D4 제안)"
   fi
   echo "      Python 주제 순서:"; indent "$(topic_lines "$py_out")"
   echo "      JS 주제 순서 (코드포인트):"; indent "$(topic_lines "$js_out")"
@@ -249,7 +249,7 @@ check_report tie_order.csv             # 위험 ③ 같은 저장률·같은 날
 check_report middle_blank_line.csv     # §5.4 ② 중간 빈 줄 (유효 입력)
 check_report same_date_many_rows.csv   # 위험 ③ 행 22개(>16)·같은 날짜 11개 — 날짜 정렬이 파일 순서를 지키는지
 
-echo "== 주제별 평균 동률 (순서 제외 비교, D4) =="
+echo "== 주제별 평균 동률 (순서 제외 비교, D4 제안) =="
 check_report_topic_tie topic_avg_tie.csv   # 위험 ③ 평균이 같은 주제 순서 (Zeta·alpha·ｅ·😀 코드포인트)
 
 echo "== 도달 0 → 확인 불가 =="
