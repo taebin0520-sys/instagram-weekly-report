@@ -40,3 +40,10 @@ jobs:
       # 실제로 리포트가 생성되는지 확인하려면 진입점을 직접 돌려봐야 한다.
       - name: smoke 테스트 — 리포트 생성 (출력 전문)
         run: python main.py sample_data/instagram_posts.csv
+
+      # 리포트 로직을 바꾸고 데모 페이지를 다시 안 만들면 Pages 가 옛 결과를 보여준다.
+      # 다시 생성해서 커밋된 docs/index.html 과 다르면 실패시켜 알려준다.
+      - name: 데모 페이지 최신 여부 확인
+        run: |
+          python render_html.py
+          git diff --exit-code docs/index.html
