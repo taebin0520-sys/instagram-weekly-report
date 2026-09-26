@@ -145,7 +145,7 @@ def build_weekly_report(df) -> str:
     for _, r in bottom.iterrows():
         lines.append(
             f"- {r['type']}·{r['topic']} ({r['date'].date()}) "
-            f"— 저장률 {_fmt_pct(r['save_rate'])} (도달 {r['reach']:,}로 가장 넓었는지 확인 필요)"
+            f"— 저장률 {_fmt_pct(r['save_rate'])} (도달 {r['reach']:,}명, 저장 {r['saves']}건)"
         )
     lines.append("")
     lines.append("[주제별 평균 저장률 — 브랜드 각인 기준]")
