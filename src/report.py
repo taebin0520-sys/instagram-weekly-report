@@ -80,8 +80,12 @@ def build_weekly_report(df) -> str:
 
     total_reach = this_totals["reach"]
     total_shares = this_totals["shares"]
-    total_inquiries = int(latest["dm_inquiries"].sum())
-    total_signups = int(latest["signups"].sum())
+    # 문의·신청은 참고 지표다. 전체 게시물 합계가 아니라
+    # 스터디모집 게시물만 센다 — 브랜드 홍보 게시물에서 나온 문의는
+    # 성과 판단 근거가 아니기 때문이다 (규칙 4).
+    study = latest[latest["topic"] == "스터디모집"]
+    study_inquiries = int(study["dm_inquiries"].sum())
+    study_signups = int(study["signups"].sum())
 
     # 주 단위 비율은 '게시물별 비율의 평균'이 아니라 '합계 기준'으로 낸다.
     # 평균을 쓰면 도달 40인 글과 4,000인 글이 같은 비중이 되어
@@ -129,7 +133,6 @@ def build_weekly_report(df) -> str:
     )
     lines.append(f"- 공유 {total_shares}건 {_fmt_delta_pct(shares_delta, delta_reason)}")
     lines.append(f"- 총 도달 {total_reach:,} {_fmt_delta_pct(reach_delta, delta_reason)}")
-    lines.append(f"- (참고) 문의 {total_inquiries}건 / 신청 {total_signups}건")
     lines.append("")
     lines.append("[TOP 게시물 - 저장률 기준]")
     for _, r in top.iterrows():
@@ -152,6 +155,15 @@ def build_weekly_report(df) -> str:
             f"- {topic}: 저장률 {_fmt_pct(row['평균저장률'])}, "
             f"참여율 {_fmt_pct(row['평균참여율'])} (게시물 {int(row['게시물수'])}건)"
         )
+    lines.append("")
+    lines.append("[참고 지표 — 문의 · 신청]")
+    lines.append("※ 브랜드 홍보 목적 게시물의 성과는 저장률·참여율로 판단합니다.")
+    lines.append("   아래는 스터디모집 게시물에 한해 참고용으로만 확인하며,")
+    lines.append("   성과 판단에 사용하지 않습니다.")
+    lines.append(
+        f"- 스터디모집 게시물 {len(study)}건 — "
+        f"DM 문의 {study_inquiries}건 / 신청 {study_signups}건"
+    )
     lines.append("")
     lines.append("[다음 주 액션] (직접 작성)")
     lines.append("1. ___________________")
