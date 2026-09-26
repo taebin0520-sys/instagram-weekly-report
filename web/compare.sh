@@ -159,32 +159,6 @@ check_report() {  # $1=파일 이름
   pass "$name — 텍스트 완전 일치 ($(printf '%s\n' "$js_out" | wc -l | tr -d ' ')줄)"
 }
 
-# 주제별 평균이 딱 같은 주제끼리의 순서만 비교에서 뺀다 (design §4 위험 ③ 실측, 결정 필요 D4 — 제안 상태).
-# pandas 는 이 순서를 보장하지 않는다 — 실수(float) 정렬에 numpy SIMD 정렬(불안정)이 쓰인다.
-# 그래서: 주제별 구획 밖은 완전 일치, 구획 안은 "줄 목록이 같은지"만 본다. 두 순서는 기록용으로 출력한다.
-check_report_topic_tie() {  # $1=파일 이름
-  local name=$1 f="$FIXTURES/$1" py_out js_out
-  listed="$listed$name "
-  py_out=$("$PYTHON" main.py "$f" 2>&1 | tr -d '\r'); py_code=${PIPESTATUS[0]}
-  js_out=$("$NODE" web/cli.mjs "$f" 2>&1 | tr -d '\r'); js_code=${PIPESTATUS[0]}
-  topic_lines() { printf '%s\n' "$1" | awk '/^\[주제별/{s=1;next} s&&/^$/{s=0} s'; }
-  other_lines() { printf '%s\n' "$1" | awk '/^\[주제별/{s=1;print;next} s&&/^$/{s=0} !s'; }
-
-  if [ "$py_code" -ne 0 ] || [ "$js_code" -ne 0 ]; then
-    fail "$name — 정상 입력인데 실패함 (Python $py_code / JS $js_code)"
-  elif [ "$(other_lines "$py_out")" != "$(other_lines "$js_out")" ]; then
-    fail "$name — 주제별 구획 밖의 텍스트가 다름"
-  elif [ "$(topic_lines "$py_out" | LC_ALL=C sort)" != "$(topic_lines "$js_out" | LC_ALL=C sort)" ]; then
-    fail "$name — 주제별 줄 목록(순서 무시)이 다름"
-  elif [ "$(topic_lines "$py_out")" = "$(topic_lines "$js_out")" ]; then
-    pass "$name — 동률 순서까지 완전 일치"
-  else
-    pass "$name — 주제별 동률 순서만 다름 (순서 제외 일치, D4 제안)"
-  fi
-  echo "      Python 주제 순서:"; indent "$(topic_lines "$py_out")"
-  echo "      JS 주제 순서 (코드포인트):"; indent "$(topic_lines "$js_out")"
-}
-
 # 도달 0 인 주제의 줄이 0.0% 로 위장되지 않고 '확인 불가'로 나오는지 (규칙 3)
 check_unavailable() {  # $1=파일 이름  $2=도달 0 게시물만 있는 주제
   local name=$1 topic=$2 lines
@@ -248,9 +222,7 @@ check_report negative_zero_delta.csv   # 위험 ① -0.0 부호
 check_report tie_order.csv             # 위험 ③ 같은 저장률·같은 날짜·영문 topic·확인 불가 위치
 check_report middle_blank_line.csv     # §5.4 ② 중간 빈 줄 (유효 입력)
 check_report same_date_many_rows.csv   # 위험 ③ 행 22개(>16)·같은 날짜 11개 — 날짜 정렬이 파일 순서를 지키는지
-
-echo "== 주제별 평균 동률 (순서 제외 비교, D4 제안) =="
-check_report_topic_tie topic_avg_tie.csv   # 위험 ③ 평균이 같은 주제 순서 (Zeta·alpha·ｅ·😀 코드포인트)
+check_report topic_avg_tie.csv         # 위험 ③ 평균이 딱 같은 주제 순서 (코드포인트: Zeta·alpha·ｅ·😀)
 
 echo "== 도달 0 → 확인 불가 =="
 check_unavailable edge_zero_reach.csv        제품
