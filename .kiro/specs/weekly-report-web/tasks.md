@@ -49,7 +49,7 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
   - `web/compare.sh`: 오류 fixture 비교 (design.md §5.3 기준)
   - CI: setup-node + compare.sh 스텝 추가
 - 완료 기준
-  - [ ] 오류 fixture 전부: Python·Node 둘 다 거부, JS가 안내한 (줄, 컬럼) ⊆ Python이 안내한 (줄, 컬럼)
+  - [ ] 오류 fixture 전부: Python·Node 둘 다 거부, JS가 안내한 (줄, 컬럼) ⊆ Python이 안내한 (줄, 컬럼) (design §5.4 해당 fixture는 줄 번호 제외, 컬럼만 비교)
   - [ ] 오류 메시지에 줄 번호·컬럼·값이 한국어로 들어간다 (줄 번호는 헤더=1번째 줄 기준)
   - [ ] 탭 구분·쉼표 구분·BOM 있는 입력을 모두 같은 행으로 읽는다
   - [ ] 날짜 형식 오류 fixture는 "JS 전용 거부"로 표시되고 비교 대상에서 빠진다
