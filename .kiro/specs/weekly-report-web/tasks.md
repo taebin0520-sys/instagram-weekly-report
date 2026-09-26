@@ -45,7 +45,7 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
   - `docs/report.js`: `parseTable`, `isCount`, `validateRows`, `run`(검증까지만, 리포트는 자리만)
   - `web/cli.mjs`: `node web/cli.mjs <CSV>` — 오류 시 stderr + 종료코드 1 (main.py와 같은 규약)
   - `web/fixtures/`: 오류 케이스 — 음수, 빈칸, 소수, `"1,000"`, 필수 컬럼 누락, 날짜 형식 오류(`2026/9/29`, JS 전용 거부),
-    중간 빈 줄 + 숫자 오류가 있는 fixture (줄 번호 비교 제외, 거부 여부만 비교)
+    중간 빈 줄 + 숫자 오류가 있는 fixture (둘 다 거부 + 컬럼 일치, 줄 번호는 비교 제외 — design.md §5.4 ②)
   - `web/compare.sh`: 오류 fixture 비교 (design.md §5.3 기준)
   - CI: setup-node + compare.sh 스텝 추가
 - 완료 기준
