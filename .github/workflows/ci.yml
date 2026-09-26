@@ -47,3 +47,13 @@ jobs:
         run: |
           python render_html.py
           git diff --exit-code docs/index.html
+
+      # 웹버전(docs/report.js)이 Python 과 같은 입력을 같은 이유로 거부하는지 비교한다.
+      # npm 패키지를 쓰지 않으므로 npm install · 캐시 단계가 없다 (requirements R5.4).
+      - name: Node 22 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 웹버전 비교 — 입력 검증 (Python vs Node)
+        run: bash web/compare.sh
