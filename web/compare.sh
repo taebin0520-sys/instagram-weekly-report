@@ -10,6 +10,10 @@
 #                (§5.4 ② 파일 중간 빈 줄: Python 줄 번호가 밀리므로)
 #   js_only      JS만 거부하면 통과. Python 결과는 참고로만 출력 (R1.9 날짜 형식은 JS가 더 좁게 받음)
 #   same_rows    쉼표·탭·BOM 형식을 JS가 모두 같은 행으로 읽는지
+#   report       리포트 텍스트가 python main.py 출력과 완전히 같은지 (requirements §4 "동일")
+#
+# 시간대 검사: CI 가 이 스크립트를 TZ=America/Los_Angeles, TZ=Asia/Seoul 로 한 번씩 더 돌린다.
+#   JS 가 시간대에 기대면 UTC 에서는 맞고 LA 에서만 틀린다 (design §4 위험 ②).
 #
 # "거부" = 종료코드 1 + 안내문에 "[입력 데이터 오류]" 가 있음.
 # 종료코드만 보지 않는 이유: Python 은 예상 못 한 예외로 죽어도 종료코드가 1이라 구분이 안 된다.
@@ -124,16 +128,61 @@ check_bytes() {
     && pass "format_tab.tsv — 탭 구분 + CRLF 줄바꿈" || fail "format_tab.tsv — 탭 또는 CRLF가 없음"
 }
 
-# 정상 입력은 두 프로그램 모두 받아야 한다. (탭 파일은 붙여넣기 전용이라 Python 대상 아님)
-check_valid() {  # $1=경로
-  run_python "$1"; run_node "$1"
-  if [ "$py_code" -eq 0 ] && [ "$js_code" -eq 0 ]; then
-    pass "$1 — 정상 입력, 둘 다 통과"
+# 리포트 텍스트 완전 일치 비교.
+# "동일" = 줄바꿈 정규화(\r\n → \n, 끝 개행 정리) 후 문자 단위로 같음 (requirements §4).
+# $(...) 는 끝의 줄바꿈을 모두 지우므로 "끝 개행"은 여기서 자연히 맞춰진다.
+check_report() {  # $1=파일 이름
+  local name=$1 f="$FIXTURES/$1" py_out js_out
+  listed="$listed$name "
+  py_out=$("$PYTHON" main.py "$f" 2>&1 | tr -d '\r'); py_code=${PIPESTATUS[0]}
+  js_out=$("$NODE" web/cli.mjs "$f" 2>&1 | tr -d '\r'); js_code=${PIPESTATUS[0]}
+
+  if [ "$py_code" -ne 0 ] || [ "$js_code" -ne 0 ]; then
+    fail "$name — 정상 입력인데 실패함 (Python $py_code / JS $js_code)"
+    indent "$py_out"; indent "$js_out"; return
+  fi
+  if [ "$py_out" != "$js_out" ]; then
+    fail "$name — 리포트 텍스트가 다름 (< Python / > JS)"
+    if command -v diff >/dev/null; then
+      diff <(printf '%s\n' "$py_out") <(printf '%s\n' "$js_out") | sed 's/^/        | /'
+    else
+      echo "      Python:"; indent "$py_out"; echo "      JS:"; indent "$js_out"
+    fi
+    return
+  fi
+  # 계산 불가가 NaN·nan·undefined·null 같은 글자로 새어 나오지 않았는지 (규칙 3)
+  local leak
+  leak=$(printf '%s\n' "$js_out" | grep -nE 'NaN|nan|undefined|null')
+  if [ -n "$leak" ]; then
+    fail "$name — 텍스트는 같지만 금지 글자가 있음"; indent "$leak"; return
+  fi
+  pass "$name — 텍스트 완전 일치 ($(printf '%s\n' "$js_out" | wc -l | tr -d ' ')줄)"
+}
+
+# 도달 0 인 주제의 줄이 0.0% 로 위장되지 않고 '확인 불가'로 나오는지 (규칙 3)
+check_unavailable() {  # $1=파일 이름  $2=도달 0 게시물만 있는 주제
+  local name=$1 topic=$2 lines
+  lines=$("$NODE" web/cli.mjs "$FIXTURES/$name" | grep -F -- "$topic")
+  if printf '%s\n' "$lines" | grep -qE '(^|[^0-9])0\.0%'; then   # 10.0% 는 걸리지 않게
+    fail "$name — '$topic'(도달 0)이 0.0% 로 표시됨"; indent "$lines"
+  elif ! printf '%s\n' "$lines" | grep -q '확인 불가'; then
+    fail "$name — '$topic'(도달 0)에 '확인 불가'가 없음"; indent "$lines"
   else
-    fail "$1 — 정상 입력인데 거부됨 (Python $py_code / JS $js_code)"
-    indent "$py_err"; indent "$js_err"
+    pass "$name — 도달 0 '$topic' → 확인 불가"
   fi
 }
+
+# 코드 금지어 (design §4 위험 ②③): 시간대·언어 설정에 따라 결과가 바뀌는 API
+check_code() {
+  local found
+  found=$(grep -nE 'localeCompare|toLocaleString|new Date\(' docs/report.js web/cli.mjs)
+  if [ -n "$found" ]; then fail "코드 금지어 발견"; indent "$found"; else pass "코드에 localeCompare / toLocaleString / new Date( 없음"; fi
+}
+
+echo "TZ=${TZ:-(설정 없음 = UTC)}"
+
+echo "== 코드 검사 =="
+check_code
 
 echo "== 오류 fixture (design §5.3) =="
 check_error error_negative.csv        line
@@ -141,6 +190,8 @@ check_error error_blank.csv           line
 check_error error_decimal.csv         line
 check_error error_comma_number.csv    line
 check_error error_missing_column.csv  line
+check_error error_edge_negative.csv   line
+check_error error_edge_blank.csv      line
 check_error error_middle_blank_line.csv noline
 
 echo "== JS 전용 거부 (R1.9) =="
@@ -151,10 +202,30 @@ echo "== 형식별 읽기 (쉼표·탭·BOM) =="
 check_bytes
 check_same_rows format_comma.csv format_tab.tsv format_bom.csv
 
-echo "== 정상 입력 =="
-check_valid sample_data/instagram_posts.csv
-check_valid "$FIXTURES/format_comma.csv"
-check_valid "$FIXTURES/format_bom.csv"
+echo "== 리포트 텍스트 완전 일치 (Python vs JS) =="
+# sample_data 복사본이 원본과 달라지면 비교 의미가 사라진다
+if [ "$(cat sample_data/instagram_posts.csv)" = "$(cat "$FIXTURES/sample_data_copy.csv")" ]; then
+  pass "sample_data_copy.csv — sample_data/instagram_posts.csv 와 같음"
+else
+  fail "sample_data_copy.csv — sample_data/instagram_posts.csv 와 다름. 다시 복사하세요"
+fi
+check_report sample_data_copy.csv
+check_report format_comma.csv
+check_report format_bom.csv
+check_report edge_zero_reach.csv
+check_report edge_zero_reach_bottom.csv
+check_report edge_single_week.csv
+check_report edge_sunday_monday.csv
+check_report edge_year_end.csv
+check_report rounding_tie.csv          # 위험 ① 딱 중간값 반올림
+check_report negative_zero_delta.csv   # 위험 ① -0.0 부호
+check_report tie_order.csv             # 위험 ③ 동률·코드포인트·확인 불가 위치
+check_report middle_blank_line.csv     # §5.4 ② 중간 빈 줄 (유효 입력)
+
+echo "== 도달 0 → 확인 불가 =="
+check_unavailable edge_zero_reach.csv        제품
+check_unavailable edge_zero_reach_bottom.csv 제품
+check_unavailable tie_order.csv              휴무안내
 
 echo "== fixture 목록 누락 검사 =="
 for f in "$FIXTURES"/*; do

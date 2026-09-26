@@ -55,5 +55,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 웹버전 비교 — 입력 검증 (Python vs Node)
+      - name: 웹버전 비교 — 입력 검증·리포트 (Python vs Node, UTC)
         run: bash web/compare.sh
+
+      # 시간대 의존 검사 (design §4 위험 ②). JS 가 기기 시간대에 기대면
+      # UTC·서울에서는 맞고 UTC 보다 느린 LA 에서만 요일이 하루 밀린다. 기본 UTC 만으로는 안 잡힌다.
+      - name: 웹버전 비교 — 시간대 America/Los_Angeles
+        run: TZ=America/Los_Angeles bash web/compare.sh
+
+      - name: 웹버전 비교 — 시간대 Asia/Seoul
+        run: TZ=Asia/Seoul bash web/compare.sh
