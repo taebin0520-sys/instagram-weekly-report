@@ -103,11 +103,13 @@ Node:   (49/400*100).toFixed(1) → 12.3
 **현상 1 — 시간대.** JS `new Date("2026-09-29")`는 **UTC 자정**으로 해석되고, `getDay()`는 **기기 시간대** 기준으로 요일을 준다.
 
 ```
+TZ=UTC                 node -e 'new Date("2026-09-29").getDay()' → 2 (화)
 TZ=Asia/Seoul          node -e 'new Date("2026-09-29").getDay()' → 2 (화)
 TZ=America/Los_Angeles node -e 'new Date("2026-09-29").getDay()' → 1 (월)  ← 하루 밀림
 ```
 
-한국에서는 우연히 맞아서 팀원 테스트로는 안 잡히고, CI 서버(UTC)나 해외 시간대 기기에서만 틀린다.
+UTC보다 느린 시간대(예: LA)에서만 틀린다. 한국(UTC+9)에서도, 기본 UTC CI에서도 우연히 맞게 나오므로
+팀원 테스트로도 기본 CI로도 잡히지 않는다. 그래서 `TZ=America/Los_Angeles` CI 스텝이 **필수**다.
 주 경계가 하루 밀리면 일·월요일 게시물이 다른 주로 가고 요약 수치 전체가 바뀐다.
 
 **현상 2 — ISO 연도.** `2027-01-03(일)`은 ISO 기준 `2026-W53`이다. 달력 연도(2027)와 ISO 주(53)를 섞으면 연말에 깨진다.
@@ -122,7 +124,7 @@ JS에서 형식을 넓게 받으려 하면 Python과 해석이 다른 경우가 
 - 지난주 = `이번 주 월요일 일수 - 7`의 ISO 주 키. 두 번째로 최신인 주를 쓰지 않는다.
 - 날짜 형식은 `YYYY-MM-DD`만 허용하고, 다르면 줄 번호와 함께 "엑셀에서 날짜 셀 형식을 yyyy-mm-dd로 바꿔 주세요"라고 안내한다.
   Python보다 좁게 받는 차이이므로 정답지 비교는 `YYYY-MM-DD` 입력으로만 한다 (requirements R1.9).
-- CI의 Node 비교 스텝을 `TZ=America/Los_Angeles`로 한 번 더 돌려 시간대 의존이 없는지 확인한다.
+- CI의 Node 비교 스텝을 `TZ=America/Los_Angeles`로 한 번 더 돌려 시간대 의존이 없는지 확인한다 (필수 — 기본 UTC 스텝만으로는 이 버그가 드러나지 않는다).
 
 ### 위험 ③ 정렬·그룹 순서 (동률과 `확인 불가`의 위치)
 
@@ -143,6 +145,9 @@ JS ["Zeta","alpha"].sort((a,b)=>a.localeCompare(b)) → [ 'alpha', 'Zeta' ]
 **현상 3 — 같은 저장률·같은 날짜.** Python은 날짜 정렬 후 (저장률 가능 여부, 저장률)로 다시 정렬한다. 동률이면 앞 단계 순서가 남는다.
 JS `Array.prototype.sort`는 안정 정렬이라 같은 규칙을 그대로 옮기면 같게 나오지만, 비교 키를 하나라도 빼먹으면 순서가 바뀐다.
 [확인 필요] pandas 단일 컬럼 `sort_values` 기본값(quicksort)은 안정 정렬을 보장하지 않는다. 한 주 게시물이 적을 때는 사실상 안정적으로 동작하지만, 같은 날짜 게시물이 많으면 파일 순서와 달라질 수 있다.
+같은 문제가 **주제별 구획에도** 있다. `kpi.topic_summary`는 `.sort_values("평균저장률", ascending=False)`로 컬럼 하나만 정렬(quicksort)하므로,
+평균 저장률이 같은 주제끼리 `groupby`의 코드포인트 순서가 남는다는 것(현상 1)도 보장되지 않는다.
+불안정할 수 있는 정렬은 `load_posts`의 날짜 정렬과 `topic_summary` 두 곳이다. TOP/하위 정렬(`["_rate_known", "_rate_value"]`)은 여러 컬럼 정렬이라 pandas가 안정 정렬을 쓴다.
 
 **대응**
 - 문자열 비교는 `a < b ? -1 : a > b ? 1 : 0` (코드포인트)만 쓴다. `localeCompare` 금지.
@@ -155,7 +160,7 @@ JS `Array.prototype.sort`는 안정 정렬이라 같은 규칙을 그대로 옮�
 ### 5.1 붙여넣기 판별
 - 첫 줄에 탭이 있으면 TSV, 없으면 CSV.
 - 따옴표로 감싼 필드(`"1,000"`)는 한 칸으로 읽는다. 값은 그대로 두고 `isCount`에서 거부한다 (Python과 동일한 결과).
-- 끝의 빈 줄은 무시한다 (pandas `skip_blank_lines`와 동일).
+- 완전히 빈 줄은 끝이든 중간이든 행으로 읽지 않는다 (pandas `skip_blank_lines=True`와 동일). 단, 오류 안내의 줄 번호는 실제 파일 줄 번호를 쓴다 (§5.4 ②).
 - 값의 앞뒤 공백: 숫자 컬럼은 `isCount`에서 `strip`, 문자열 컬럼(`topic` 등)은 **그대로 둔다** (Python이 `"스터디모집 "`을 스터디모집으로 세지 않으므로 같게 한다).
 
 ### 5.2 파일 인코딩
@@ -177,6 +182,28 @@ JS는 원문 문자열을 검사하므로 3번째 줄만 안내한다. 권장안
 2. JS가 안내한 (줄, 컬럼)이 Python이 안내한 (줄, 컬럼) 목록에 포함된다
 
 Python 쪽 현상은 이번 범위에서 고치지 않고 GitHub Issue로 따로 남긴다.
+
+### 5.4 알려진 차이 (Python을 따라 하지 않는 것)
+
+**① 전각 숫자·위첨자 (`isdigit` 차이)**
+Python `_is_count`는 `str.isdigit()`을 쓰는데, 이 함수는 ASCII `0-9` 밖의 숫자 문자도 True로 본다.
+
+```
+Python 3.11: "１".isdigit() → True (전각 숫자)   "²".isdigit() → True (위첨자)
+JS:          /^[0-9]+$/.test("１") → false        /^[0-9]+$/.test("²") → false
+```
+
+JS는 ASCII `0-9`만 허용한다 (더 좁게 받음). 이런 값이 들어간 입력은 Python·JS 결과가 같을 수 없으므로 정답지 비교에서 제외한다.
+[확인 필요] Python이 `_is_count` 통과 뒤 `astype(int)`에서 이 값을 어떻게 처리하는지는 실측하지 않았다.
+
+**② 파일 중간 빈 줄 → Python 줄 번호 밀림**
+pandas는 끝뿐 아니라 파일 중간의 빈 줄도 건너뛰고, `_csv_line_no`는 `index + 2`로 계산한다.
+그래서 빈 줄 **뒤에 있는** 행은 Python이 실제 파일보다 앞선 줄 번호로 안내한다.
+JS는 사용자가 파일에서 찾을 수 있도록 **실제 파일 줄 번호**를 쓴다.
+- 유효 입력: 리포트 텍스트에는 줄 번호가 없으므로 그대로 완전 일치 비교한다.
+- 오류 입력: 중간 빈 줄이 있는 fixture는 §5.3 판정에서 **줄 번호 비교를 제외**하고 (둘 다 거부 + 컬럼 일치)만 본다.
+
+[확인 필요] 이 동작은 pandas 문서(`skip_blank_lines`)와 코드 확인 기준이며, fixture로 실측해 확정한다.
 
 ## 6. 데이터 보호를 기술적으로 강제하는 방법
 
@@ -221,19 +248,19 @@ Python 쪽 현상은 이번 범위에서 고치지 않고 GitHub Issue로 따로
 
 1. `actions/setup-node@v4` (Node 22, npm 설치 없음)
 2. `bash web/compare.sh` — 유효 fixture: 텍스트 완전 일치 / 오류 fixture: §5.3 기준
-3. `TZ=America/Los_Angeles bash web/compare.sh` — 시간대 의존 검사
+3. `TZ=America/Los_Angeles bash web/compare.sh` — 시간대 의존 검사 (필수, 위험 ②)
 4. 예시 데이터 동기화 검사
 5. §6 금지 API 검사
 6. `pytest -v` → 17 passed 유지 (기존 스텝)
 
-## 9. steering 수정 제안 (승인 후 적용)
+## 9. steering 수정 (W1에서 적용)
 
 현재 steering과 충돌하는 곳이 한 줄이 아니라 **세 곳**이다.
 
 | 위치 | 현재 | 제안 |
 |---|---|---|
 | 만들지 않는 것 | `Streamlit / 웹 대시보드 (텍스트 리포트만)` | `서버·Streamlit 웹 대시보드. 웹 UI는 브라우저 내 계산 방식(docs/)만 허용하며, 출력은 텍스트 리포트와 동일해야 한다` |
-| 규칙 1 구조 유지 | 폴더 목록에 `docs/`, `web/` 없음 + "새 폴더 만들지 않는다" | 목록에 `docs/ 웹버전 화면·계산(report.js)`, `web/ Node 비교 검증 전용` 두 줄 추가 |
+| 규칙 1 구조 유지 | 폴더 목록에 `docs/`, `web/` 없음 + "새 폴더 만들지 않는다". 이미 있는 `render_html.py`, `docs/`, `tests/test_edge_cases.py`도 빠져 있음 | 목록을 실제 저장소 파일 기준으로 맞추고(`render_html.py`, `tests/test_edge_cases.py` 추가), `docs/ 웹버전 화면·계산(report.js)`, `web/ Node 비교 검증 전용` 두 줄 추가 |
 | 규칙 7 데모 페이지 | `docs/index.html`은 sample_data 데모 전용 | `docs/index.html`은 브라우저 내 계산 도구. 저장소에는 가상 데이터(예시·fixture)만 커밋한다 |
 
 ## 10. 롤백
