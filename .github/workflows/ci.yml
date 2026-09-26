@@ -60,8 +60,11 @@ jobs:
 
       # 시간대 의존 검사 (design §4 위험 ②). JS 가 기기 시간대에 기대면
       # UTC·서울에서는 맞고 UTC 보다 느린 LA 에서만 요일이 하루 밀린다. 기본 UTC 만으로는 안 잡힌다.
+      # 앞 비교가 실패해도 시간대별 결과는 따로 확인할 수 있게 실행한다 (취소된 경우만 건너뜀).
       - name: 웹버전 비교 — 시간대 America/Los_Angeles
+        if: ${{ !cancelled() }}
         run: TZ=America/Los_Angeles bash web/compare.sh
 
       - name: 웹버전 비교 — 시간대 Asia/Seoul
+        if: ${{ !cancelled() }}
         run: TZ=Asia/Seoul bash web/compare.sh
