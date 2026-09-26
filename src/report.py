@@ -1,6 +1,13 @@
 """주간 리포트를 텍스트로 생성한다. (브랜드 강화 기준)"""
 from src.data_loader import split_by_week, week_bounds
-from src.kpi import add_rates, week_over_week, topic_summary
+from src.kpi import (
+    add_rates,
+    diff_pp,
+    engagement_rate,
+    save_rate,
+    topic_summary,
+    week_over_week,
+)
 
 
 def _fmt_pct(v):
@@ -29,6 +36,22 @@ def _fmt_delta_pp(v, reason=""):
     return f"({v:+.1f}%p 전주 대비)"
 
 
+def _totals(week_df):
+    """한 주의 합계. 주 단위 비율의 분자·분모로 쓴다.
+
+    kpi.save_rate / kpi.engagement_rate 는 row["reach"] 처럼 키 접근만 하므로
+    Series 가 아닌 dict 도 그대로 받는다. 덕분에 '게시물 1건'용 함수를
+    '주 전체'에 재사용할 수 있고, reach == 0 -> None 분기도 함께 따라온다.
+    """
+    return {
+        "reach": int(week_df["reach"].sum()),
+        "likes": int(week_df["likes"].sum()),
+        "comments": int(week_df["comments"].sum()),
+        "saves": int(week_df["saves"].sum()),
+        "shares": int(week_df["shares"].sum()),
+    }
+
+
 def _delta_reason(previous):
     """전주 대비를 계산할 수 없는 사유.
 
@@ -52,16 +75,38 @@ def build_weekly_report(df) -> str:
     # "이번 주"가 어디까지인지가 게시 여부에 따라 달라지면 안 된다.
     start, end = week_bounds(latest)
 
-    total_reach = int(latest["reach"].sum())
-    total_saves = int(latest["saves"].sum())
-    total_shares = int(latest["shares"].sum())
+    this_totals = _totals(latest)
+    prev_totals = _totals(previous) if previous is not None else None
+
+    total_reach = this_totals["reach"]
+    total_shares = this_totals["shares"]
     total_inquiries = int(latest["dm_inquiries"].sum())
     total_signups = int(latest["signups"].sum())
-    avg_engagement = latest["engagement_rate"].mean(skipna=True)
 
-    prev_reach = int(previous["reach"].sum()) if previous is not None else None
-    reach_delta = week_over_week(total_reach, prev_reach)
+    # 주 단위 비율은 '게시물별 비율의 평균'이 아니라 '합계 기준'으로 낸다.
+    # 평균을 쓰면 도달 40인 글과 4,000인 글이 같은 비중이 되어
+    # 저도달 게시물이 과대 반영된다. 합계 기준은 도달로 자연 가중된다.
+    #
+    # 규칙 3 관련: 예전 방식인 engagement_rate 열의 .mean(skipna=True) 은
+    # None 이 섞인 object dtype 에서 None 이 아니라 nan 을 돌려줄 수 있고,
+    # 그러면 _fmt_pct 가 '확인 불가'가 아니라 'nan%'를 출력한다.
+    # 합계 기준으로 바꾸면 분모가 reach 합계라서 그 경로가 사라진다.
+    week_save_rate = save_rate(this_totals)
+    week_engagement_rate = engagement_rate(this_totals)
+    prev_save_rate = save_rate(prev_totals) if prev_totals is not None else None
+    prev_engagement_rate = (
+        engagement_rate(prev_totals) if prev_totals is not None else None
+    )
+
     delta_reason = _delta_reason(previous)
+    save_rate_delta = diff_pp(week_save_rate, prev_save_rate)
+    engagement_delta = diff_pp(week_engagement_rate, prev_engagement_rate)
+    shares_delta = week_over_week(
+        total_shares, prev_totals["shares"] if prev_totals is not None else None
+    )
+    reach_delta = week_over_week(
+        total_reach, prev_totals["reach"] if prev_totals is not None else None
+    )
 
     top = latest.sort_values("save_rate", ascending=False).head(2)
     bottom = latest.sort_values("save_rate", ascending=True).head(1)
@@ -72,10 +117,18 @@ def build_weekly_report(df) -> str:
     lines.append(f"{start}(월) ~ {end}(일) ({len(latest)}건)")
     lines.append("━" * 33)
     lines.append("")
+    # 지표 우선순위: 저장률(브랜드 각인 1순위) -> 참여율 -> 공유 -> 도달
     lines.append("[이번 주 요약]")
+    lines.append(
+        f"- 저장률 {_fmt_pct(week_save_rate)} "
+        f"{_fmt_delta_pp(save_rate_delta, delta_reason)}"
+    )
+    lines.append(
+        f"- 참여율 {_fmt_pct(week_engagement_rate)} "
+        f"{_fmt_delta_pp(engagement_delta, delta_reason)}"
+    )
+    lines.append(f"- 공유 {total_shares}건 {_fmt_delta_pct(shares_delta, delta_reason)}")
     lines.append(f"- 총 도달 {total_reach:,} {_fmt_delta_pct(reach_delta, delta_reason)}")
-    lines.append(f"- 저장 {total_saves}건 / 공유 {total_shares}건")
-    lines.append(f"- 평균 참여율 {_fmt_pct(avg_engagement)}")
     lines.append(f"- (참고) 문의 {total_inquiries}건 / 신청 {total_signups}건")
     lines.append("")
     lines.append("[TOP 게시물 - 저장률 기준]")
