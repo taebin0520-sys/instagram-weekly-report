@@ -12,5 +12,10 @@ venv/
 # Kiro 로컬 샌드박스 설정 (spec/steering은 커밋한다)
 .kiro/settings/
 
+# 실제 운영 데이터 (공개 저장소이므로 커밋하지 않는다)
+# sample_data/ 는 가상 데이터라 커밋한다.
+/my_data/
+*_real.csv
+
 # OS
 .DS_Store

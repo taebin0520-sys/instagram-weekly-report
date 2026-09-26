@@ -7,6 +7,19 @@
 아니라 "저장·공유·참여율"을 핵심 지표로 본다.
 
 ## 실행 방법
+
+가상환경 준비 (전역에 pandas 3.0을 깔면 다른 프로젝트가 깨질 수 있다):
+```bash
+python -m venv .venv
+
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows
+.venv\Scripts\activate
+```
+
+설치 및 실행:
 ```bash
 pip install -r requirements.txt
 python main.py sample_data/instagram_posts.csv
@@ -16,6 +29,8 @@ python main.py sample_data/instagram_posts.csv
 ```bash
 pytest
 ```
+
+실제 데이터는 `my_data/` 폴더에 두세요 (커밋되지 않음).
 
 > Python 3.11 이상이 필요하다 (pandas 3.0 요구사항).
 > 버전은 `requirements.txt`에 고정되어 있다.
