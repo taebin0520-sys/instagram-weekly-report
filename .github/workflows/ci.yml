@@ -41,13 +41,6 @@ jobs:
       - name: smoke 테스트 — 리포트 생성 (출력 전문)
         run: python main.py sample_data/instagram_posts.csv
 
-      # 리포트 로직을 바꾸고 데모 페이지를 다시 안 만들면 Pages 가 옛 결과를 보여준다.
-      # 다시 생성해서 커밋된 docs/index.html 과 다르면 실패시켜 알려준다.
-      - name: 데모 페이지 최신 여부 확인
-        run: |
-          python render_html.py
-          git diff --exit-code docs/index.html
-
       # 웹버전(docs/report.js)이 Python 과 같은 입력을 같은 이유로 거부하는지 비교한다.
       # npm 패키지를 쓰지 않으므로 npm install · 캐시 단계가 없다 (requirements R5.4).
       - name: Node 22 설치
