@@ -9,7 +9,7 @@
 - `src/`, `main.py`, `tests/`는 수정하지 않는다. `pytest -v` → **17 passed** 유지를 PR 본문에 첨부한다.
 - 외부 npm 패키지를 설치하지 않는다 (Node 22 내장 모듈만).
 - fixture·예시 데이터는 **가상 데이터만** 커밋한다. 실제 조합 데이터 금지.
-- 구현 중 Python과 다른 출력이 나오면 JS를 Python에 맞춘다. Python을 고치지 않는다. Python 쪽 문제로 보이면 Issue로만 남긴다.
+- 구현 중 Python과 다른 출력이 나오면 JS를 Python에 맞춘다. Python을 고치지 않는다 (예외: R5.1, 이미 #15로 처리 완료). Python 쪽 문제로 보이면 Issue로만 남긴다.
 
 ## 진행 순서
 
