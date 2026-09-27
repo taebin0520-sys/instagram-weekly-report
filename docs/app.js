@@ -7,7 +7,7 @@
  * 이 파일이 하는 일:
  *   1) 파일 읽기 (UTF-8)
  *   2) WeeklyReport.run 호출
- *   3) 결과 표시 · 오류 표시 · 복사
+ *   3) 결과 표시(잠정: 빈 topic → "(미분류)") · 오류 표시 · 복사
  *
  * 입력 데이터를 어디에도 보내지 않고 저장하지 않는다 (requirements R4).
  * 위쪽의 순수 함수들은 Node 에서도 불러와 확인할 수 있게 내보낸다 (web/compare.sh).
@@ -36,14 +36,52 @@
     }
   }
 
+  /**
+   * [잠정 처리, 정식 결정 대기 — design §5.4 ④, requirements R3.5]
+   * topic 이 빈칸·공백뿐인 게시물을 리포트 텍스트에서 "(미분류)"로 보여 준다.
+   *
+   * 계산은 바꾸지 않는다. report.js 가 만든 텍스트에서 그 게시물의 줄 머리만 글자 그대로 찾아 바꾼다.
+   *   TOP/하위:  "- 카드뉴스· (2026-10-07) — 저장률" → "- 카드뉴스·(미분류) (2026-10-07) — 저장률"
+   *   주제별:    "- : 저장률"                        → "- (미분류): 저장률"
+   * 정규식으로 넓게 찾지 않고 행 데이터로 정확한 줄 머리를 만들어 비교한다 — 다른 줄을 잘못 바꾸지 않기 위해.
+   * 빈 topic 이 없으면 텍스트를 한 글자도 바꾸지 않는다 (python main.py 결과와 그대로 같음).
+   */
+  const UNCLASSIFIED = "(미분류)";
+
+  function labelUnclassified(reportText, rows) {
+    const blank = rows.filter((r) => r.topic.trim() === "");
+    if (blank.length === 0) return reportText;
+
+    const postPrefixes = blank.map((r) => ({
+      from: "- " + r.type + "·" + r.topic + " (" + r.date + ") — 저장률 ",
+      to: "- " + r.type + "·" + UNCLASSIFIED + " (" + r.date + ") — 저장률 ",
+    }));
+    const topicPrefixes = Array.from(new Set(blank.map((r) => r.topic))).map((t) => ({
+      from: "- " + t + ": 저장률 ",
+      to: "- " + UNCLASSIFIED + ": 저장률 ",
+    }));
+
+    let section = "";
+    return reportText.split("\n").map((line) => {
+      if (line.startsWith("[")) {
+        section = line;
+        return line;
+      }
+      const table = section.startsWith("[TOP") || section.startsWith("[하위") ? postPrefixes
+        : section.startsWith("[주제별") ? topicPrefixes : [];
+      const hit = table.find((p) => line.startsWith(p.from));
+      return hit ? hit.to + line.slice(hit.from.length) : line;
+    }).join("\n");
+  }
+
   /** 입력 글자 → 화면에 보일 결과. 계산은 WeeklyReport.run 이 전부 한다. */
   function makeReport(text) {
     const result = WeeklyReport.run(text);
     if (!result.ok) return result;
-    return { ok: true, rows: result.rows, report: result.report };
+    return { ok: true, rows: result.rows, report: labelUnclassified(result.report, result.rows) };
   }
 
-  const api = { decodeBytes: decodeBytes, makeReport: makeReport };
+  const api = { decodeBytes: decodeBytes, labelUnclassified: labelUnclassified, makeReport: makeReport };
   if (inNode) {
     module.exports = api;
     return; // Node 에는 화면이 없다
