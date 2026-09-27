@@ -54,10 +54,8 @@ function main(argv) {
 
   if (showRows) {
     console.log(JSON.stringify(result.rows, null, 2));
-  } else if (result.report === null) {
-    console.log(`검증 통과: ${result.rows.length}건. 리포트 텍스트 생성은 아직 구현 전입니다 (W3).`);
   } else {
-    console.log(result.report);
+    console.log(result.report); // print() 처럼 끝에 줄바꿈 1개가 붙는다
   }
   return 0;
 }
