@@ -86,6 +86,7 @@
 ### R5. 구조
 
 - **R5.1** 기존 Python 코드(`src/`, `main.py`, `tests/`)는 수정하지 않는다.
+  예외: 정렬 안정성 수정 2곳 (D4·D5, fix/stable-sort).
 - **R5.2** 계산 로직은 JS 파일 하나로 분리하고, 브라우저와 Node 양쪽에서 실행 가능해야 한다.
 - **R5.3** 화면은 `docs/index.html` (GitHub Pages `/docs` 기준).
 - **R5.4** 외부 npm 패키지를 쓰지 않는다 (Node 내장 모듈만).
@@ -108,10 +109,12 @@
 - 헤더 한글화
 - Python 버전의 기존 동작 수정 (발견된 차이는 기록만 하고 별도 이슈로 분리)
 
-## 7. 결정 사항 (W1에서 확정)
+## 7. 결정 사항 (D1~D3: W1 확정, D4~D5: W3 실측 후 확정)
 
 | # | 질문 | 권장안 | 이유 | 상태 |
 |---|---|---|---|---|
 | D1 | 계산 JS를 어디에 두나 | `docs/report.js` | GitHub Pages는 `/docs`만 공개하므로 `web/report.js`는 페이지에서 불러올 수 없다 (design.md §2) | **확정** |
 | D2 | 기존 데모 페이지(`render_html.py` → `docs/index.html`)와 CI "데모 페이지 최신 여부" 스텝 처리 | 웹버전이 `docs/index.html`을 대체, `render_html.py`와 해당 CI 스텝 제거 | 같은 파일을 두 생성기가 덮어쓰면 CI가 항상 실패한다. "예시 데이터 불러오기"가 데모 역할을 대신한다 | **확정** (실제 제거는 W4) |
 | D3 | 빈칸 또는 소수 오류 시 Python이 정상 행까지 오류로 나열하는 현상(design.md §5.3)을 JS가 따라 할지 | 따라 하지 않음. 실제 문제 행만 안내 | 사용자 목적은 "고칠 곳 찾기"이고, Python 수정은 이번 범위 밖이다 | **확정** (Python 현상 Issue 등록은 W5) |
+| D4 | 주제별 평균이 딱 같은 주제끼리의 순서 (design.md §4 위험 ③) | Python `topic_summary` 정렬을 안정 정렬(`kind="stable"`)로 바꾼다. JS는 코드포인트 순서 + 안정 정렬 유지 | 기존 Python 순서는 numpy SIMD 정렬(불안정)에 달려 있어 JS가 재현할 수 없고, CPU에 따라 Python 자신도 달라질 수 있다 | **확정: Python 안정 정렬** (fix/stable-sort) |
+| D5 | 같은 날짜 게시물이 많을 때(행 16개 초과) 날짜 정렬 순서 (design.md §4 위험 ③) | Python `load_posts` 정렬을 안정 정렬(`kind="stable"`)로 바꾼다. JS는 파일 순서 유지(안정 정렬) | numpy 정렬을 JS로 옮기는 것보다 "같은 날짜는 파일 순서"라는 규칙이 설명하기 쉽고 양쪽이 같아진다 | **확정: Python 안정 정렬** (fix/stable-sort) |

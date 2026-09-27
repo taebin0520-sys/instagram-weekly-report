@@ -155,6 +155,13 @@ JS `Array.prototype.sort`는 안정 정렬이라 같은 규칙을 그대로 옮�
 - 주제별: 코드포인트 오름차순으로 묶은 뒤 평균 내림차순, `null` 평균은 맨 뒤.
 - fixture `tie_order.csv`: 같은 저장률 게시물, 같은 날짜 게시물, 영문 topic, 전부 도달 0인 topic을 포함.
 
+**결정 (D4·D5, fix/stable-sort)** — PR #14 CI 실측에서 위 [확인 필요] 두 곳이 실제로 Python·JS 불일치를 냈다
+(주제별 평균이 딱 같은 주제의 순서, 행 16개 초과 시 같은 날짜 게시물 순서). 원인은 pandas 기본 정렬(`kind="quicksort"`)이
+numpy의 불안정 정렬(실수는 CPU별 SIMD 정렬, 날짜는 분할 정렬)로 넘어가는 것이다. JS로 numpy 정렬을 재현하지 않고,
+Python `load_posts`의 날짜 정렬과 `topic_summary`의 평균 저장률 정렬에 `kind="stable"`을 붙여 두 곳 모두 안정 정렬로 바꾼다.
+이후 규칙은 양쪽이 같다: 같은 날짜는 파일 순서, 평균이 같은 주제는 코드포인트 순서.
+동률이 없는 입력(예: `sample_data`)은 출력이 바뀌지 않는다. 정렬 방식 외 Python 코드는 수정하지 않는다 (requirements R5.1 예외).
+
 ## 5. 입력 처리 상세
 
 ### 5.1 붙여넣기 판별
@@ -217,6 +224,9 @@ CI 실측 (PR #13, `jsonly_sign_prefix.csv`: 3번째 줄 `likes = +5`, 4번째 �
 
 JS는 거부를 유지한다. 개수 칸에 부호를 쓰는 것은 입력 실수일 가능성이 높고, `-0`을 받으면 "음수 거부" 안내와 어긋난다.
 이 fixture는 "JS 전용 거부"로 등록해 Python과 비교하지 않는다.
+
+**④ 빈 topic·type 및 pandas NA 문자열 (`NA`, `N/A`, `null`, `nan` 등)**
+빈 topic·type 및 pandas NA 문자열(NA, N/A, null, nan 등) — Python은 nan으로 출력하거나 주제별 집계에서 빠질 수 있음. 미실측. 처리 방식은 W3 이후 결정.
 
 ## 6. 데이터 보호를 기술적으로 강제하는 방법
 
