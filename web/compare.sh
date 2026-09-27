@@ -172,6 +172,22 @@ check_unavailable() {  # $1=파일 이름  $2=도달 0 게시물만 있는 주�
   fi
 }
 
+# EUC-KR 파일 읽기 (requirements R1.8, 웹 전용 보완 — Python 은 이 파일을 거부하므로 정답지 비교 대상 아님)
+# 화면(docs/app.js)의 decodeBytes 로 EUC-KR 파일을 읽어 만든 리포트가,
+# 같은 내용의 UTF-8 파일 리포트(= check_report 로 Python 과 완전 일치 확인된 것)와 같은지 본다.
+check_encoding() {  # $1=EUC-KR 파일  $2=같은 내용의 UTF-8 파일
+  local name=$1 f="$FIXTURES/$1" u="$FIXTURES/$2" out
+  listed="$listed$name "
+  out=$("$NODE" -e '
+    const A = require("./docs/app.js"), fs = require("fs");
+    const d = A.decodeBytes(new Uint8Array(fs.readFileSync(process.argv[1])));
+    if (!d.ok || d.encoding !== "EUC-KR") { console.log("판별 실패: " + (d.encoding || d.message)); process.exit(1); }
+    const r = A.makeReport(d.text), g = A.makeReport(fs.readFileSync(process.argv[2], "utf8"));
+    if (!r.ok || !g.ok || r.report !== g.report) { console.log("리포트가 UTF-8 파일과 다름"); process.exit(1); }
+    console.log("EUC-KR 로 판별, 리포트가 " + process.argv[3] + " 과 완전 일치");' "$f" "$u" "$2" 2>&1)
+  if [ $? -eq 0 ]; then pass "$name — $out"; else fail "$name — $out"; fi
+}
+
 # 코드 금지어 (design §4 위험 ②③): 시간대·언어 설정에 따라 결과가 바뀌는 API
 check_code() {
   local found
@@ -222,7 +238,11 @@ check_report negative_zero_delta.csv   # 위험 ① -0.0 부호
 check_report tie_order.csv             # 위험 ③ 같은 저장률·같은 날짜·영문 topic·확인 불가 위치
 check_report middle_blank_line.csv     # §5.4 ② 중간 빈 줄 (유효 입력)
 check_report same_date_many_rows.csv   # 위험 ③ 행 22개(>16)·같은 날짜 11개 — 날짜 정렬이 파일 순서를 지키는지
+check_report encoding_utf8.csv         # EUC-KR 비교의 기준 파일 (UTF-8, 같은 내용)
 check_report topic_avg_tie.csv         # 위험 ③ 평균이 딱 같은 주제 순서 (코드포인트: Zeta·alpha·ｅ·😀)
+
+echo "== EUC-KR 파일 읽기 (웹 전용, R1.8) =="
+check_encoding encoding_euckr.csv encoding_utf8.csv
 
 echo "== 도달 0 → 확인 불가 =="
 check_unavailable edge_zero_reach.csv        제품

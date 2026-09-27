@@ -5,7 +5,7 @@
  * 화면 결과와 CI 비교 결과가 같다고 말할 수 있기 때문이다.
  *
  * 이 파일이 하는 일:
- *   1) 파일 읽기 (UTF-8)
+ *   1) 파일 읽기 — 글자 인코딩 판별 (UTF-8 → 안 되면 EUC-KR)
  *   2) WeeklyReport.run 호출
  *   3) 결과 표시(잠정: 빈 topic → "(미분류)") · 오류 표시 · 복사
  *
@@ -19,18 +19,25 @@
   const WeeklyReport = inNode ? require("./report.js") : globalThis.WeeklyReport;
 
   /**
-   * 파일 바이트 → 글자.
+   * 파일 바이트 → 글자. (requirements R1.8, design §5.2)
    *
-   * UTF-8 로 읽는다. fatal: true 라서 UTF-8 이 아니면 깨진 글자(�)로 읽지 않고 실패한다.
-   * 실패하면 오류로 알린다 — 틀린 글자로 조용히 계산하지 않는다.
+   * 먼저 UTF-8 로 읽는다. fatal: true 라서 UTF-8 이 아니면 깨진 글자(�)로 읽지 않고 실패한다.
+   * 실패하면 EUC-KR 로 다시 읽는다. 한국어 윈도우 엑셀의 "CSV(쉼표로 분리)" 저장은 EUC-KR 계열(CP949)이다.
+   * 브라우저의 "euc-kr" 디코더는 CP949 확장 글자(예: 똠)까지 읽는다 (웹 표준 Encoding Standard).
+   * 둘 다 안 되면 오류로 알린다 — 틀린 글자로 조용히 계산하지 않는다.
    */
   function decodeBytes(bytes) {
     try {
       return { ok: true, encoding: "UTF-8", text: new TextDecoder("utf-8", { fatal: true }).decode(bytes) };
     } catch (e) {
+      // UTF-8 이 아니다 → EUC-KR 시도
+    }
+    try {
+      return { ok: true, encoding: "EUC-KR", text: new TextDecoder("euc-kr", { fatal: true }).decode(bytes) };
+    } catch (e) {
       return {
         ok: false,
-        message: "파일을 UTF-8 로 읽을 수 없습니다.\n" +
+        message: "파일의 글자 인코딩을 읽을 수 없습니다 (UTF-8, EUC-KR 둘 다 아님).\n" +
           "엑셀에서 \"CSV UTF-8(쉼표로 분리)\"로 다시 저장해 주세요.",
       };
     }
