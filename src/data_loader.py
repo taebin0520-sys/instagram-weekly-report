@@ -65,7 +65,7 @@ def load_posts(csv_path: str) -> pd.DataFrame:
         df[col] = df[col].astype(int)
 
     df["date"] = pd.to_datetime(df["date"])
-    return df.sort_values("date").reset_index(drop=True)
+    return df.sort_values("date", kind="stable").reset_index(drop=True)
 
 
 def week_bounds(week_df: pd.DataFrame):
