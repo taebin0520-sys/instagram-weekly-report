@@ -1,0 +1,35 @@
+# 임시 측정 전용 (tmp/measure-54-4 브랜치에만 존재, 머지 금지)
+# design.md §5.4 ④: 빈 topic·type / NA 문자열 / 공백 topic 에서 Python·Node 출력을 그대로 기록한다.
+name: tmp-measure-54-4
+
+on:
+  pull_request:
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt && pip list | grep -iE '^(pandas|numpy) '
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 측정 — Python / Node 전체 출력과 종료코드
+        run: |
+          for f in tmp_measure_54_4/*.csv; do
+            echo "################ $f"
+            echo "---- 입력 4번째 줄 (공백은 ␣ 로 표시)"
+            sed -n 4p "$f" | sed 's/ /␣/g'
+            for tool in python node; do
+              if [ "$tool" = python ]; then out=$(python main.py "$f" 2>&1); code=$?
+              else out=$(node web/cli.mjs "$f" 2>&1); code=$?; fi
+              echo "---- $tool 종료코드=$code"
+              # 줄 앞뒤를 | 로 감싸서 빈칸·공백이 보이게 한다
+              printf '%s\n' "$out" | sed 's/^/|/; s/$/|/'
+              echo "---- $tool nan 포함 줄 (대소문자 무시):"
+              printf '%s\n' "$out" | grep -ni 'nan' || echo "(없음)"
+            done
+          done
