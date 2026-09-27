@@ -55,7 +55,7 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
   - [x] 날짜 형식 오류 fixture는 "JS 전용 거부"로 표시되고 비교 대상에서 빠진다
   - [x] CI 초록, pytest 17 passed
 
-### W3. 계산·리포트 텍스트 + 정답지 비교
+### W3. 계산·리포트 텍스트 + 정답지 비교 — 완료 (#14)
 
 - 선행: W2
 - 범위
@@ -66,12 +66,12 @@ W2·W3는 화면 없이 Node로만 검증한다. 계산이 Python과 일치하�
   - `web/compare.sh`: 유효 fixture 텍스트 완전 일치 비교 추가
   - CI: `TZ=America/Los_Angeles`로 compare.sh 한 번 더
 - 완료 기준
-  - [ ] 유효 fixture 전부 `node web/cli.mjs` 출력 == `python main.py` 출력 (줄바꿈 정규화 후 완전 일치)
-  - [ ] `rounding_tie.csv`에서 12.25% → `12.2%` (Python과 같음)
-  - [ ] 도달 0·지난주 없음 케이스에 `NaN`, `nan%`, `0.0%`(위장), `undefined`, `null` 문자열이 출력에 없다
-  - [ ] UTC·Asia/Seoul·America/Los_Angeles 세 시간대에서 결과가 같다
-  - [ ] 코드에 `localeCompare`, `toLocaleString`, `new Date(`가 없다 (design.md 위험 ②③)
-  - [ ] CI 초록, pytest 17 passed
+  - [x] 유효 fixture 전부 `node web/cli.mjs` 출력 == `python main.py` 출력 (줄바꿈 정규화 후 완전 일치)
+  - [x] `rounding_tie.csv`에서 12.25% → `12.2%` (Python과 같음)
+  - [x] 도달 0·지난주 없음 케이스에 `NaN`, `nan%`, `0.0%`(위장), `undefined`, `null` 문자열이 출력에 없다
+  - [x] UTC·Asia/Seoul·America/Los_Angeles 세 시간대에서 결과가 같다
+  - [x] 코드에 `localeCompare`, `toLocaleString`, `new Date(`가 없다 (design.md 위험 ②③)
+  - [x] CI 초록, pytest 17 passed
 
 ### W4. 화면 (docs/index.html + docs/app.js)
 
