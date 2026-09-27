@@ -72,5 +72,5 @@ def topic_summary(df: pd.DataFrame) -> pd.DataFrame:
             총문의=("dm_inquiries", "sum"),
             총신청=("signups", "sum"),
         )
-        .sort_values("평균저장률", ascending=False)
+        .sort_values("평균저장률", ascending=False, kind="stable")
     )
